@@ -1,0 +1,96 @@
+Bladder,0,,
+Max,65,Gy,<6% grade 3+ toxicity
+V65,50,%,grade 3+ toxicity
+V70,35,%,grade 3+ toxicity
+V75,25,%,grade 3+ toxicity
+V80,15,%,grade 3+ toxicity
+end,,,
+Brain,0,,
+Max,60,Gy,<3% symptomatic necrosis
+Max,72,Gy,5% symptomatic necrosis
+Max,90,Gy,10% symptomatic necrosis
+end,,,
+Brain Stem,0,,
+Max,54,Gy,5% neuropathy or necrosis
+end,,,
+Cochlea,1,,
+Mean,45,Gy,<30% sensory-neural hearing loss
+end,,,
+Esophagus,0,,
+Mean,34,Gy,5-20% grade 3+ esophagitis
+V35,50,%,<30% grade 2+ esophagitis
+V50,40,%,<30% grade 2+ esophagitis
+V70,20,%,<30% grade 2+ esophagitis
+end,,,
+Heart,0,,
+Mean,26,Gy,<15% pericarditis
+V30,46,%,<15% pericarditis
+V25,10,%,<1% long-term cardiac mortality
+end,,,
+Kidneys,0,,
+Mean,15,Gy,<5% clinical dysfunction
+Mean,28,Gy,<50% clinical dysfunction
+Mean,28,Gy,<50% clinical dysfunction
+end,,,
+Larynx,0,,
+Max,66,Gy,<20% vocal dysfunction
+Mean,50,Gy,<30% aspiration
+Mean,44,Gy,<20% edema
+V50,27,%,<20% edema
+end,,,
+Liver,0,,
+Mean,30,Gy,<5% RILD
+Mean,42,Gy,<50% RILD
+end,,,
+Lungs,0,,
+V20,30,%,<20% symptomatic pneumonitis
+Mean,7,Gy,5% symptomatic pneumonitis
+Mean,13,Gy,10% symptomatic pneumonitis
+Mean,20,Gy,20% symptomatic pneumonitis
+Mean,24,Gy,30% symptomatic pneumonitis
+Mean,27,Gy,40% symptomatic pneumonitis
+end,,,
+Optic Chiasm,1,,
+Max,55,Gy,<3% optic neuropathy
+Max,60,Gy,<7% optic neuropathy
+end,,,
+Optic Nerve,1,,
+Max,55,Gy,<3% optic neuropathy
+Max,60,Gy,<7% optic neuropathy
+end,,,
+Parotid,1,,
+Mean,20,Gy,<20% long-term salivary function <25%
+end,,,
+Parotids,0,,
+Mean,25,Gy,<20% long-term salivary function <25%
+Mean,39,Gy,<50% long-term salivary function <25%
+end,,,
+Penile Bulb,0,,
+Mean,50,Gy,35% severe erectile dysfunction
+D90,50,Gy,35% severe erectile dysfunction
+D60,70,Gy,55% severe erectile dysfunction
+end,,,
+Pharyngeal Constrictors,0,,
+Mean,50,Gy,<20% symptomatic dysphagia and aspiration
+end,,,
+Rectum,0,,
+V50,50,%,<10% grade 3+ toxicity
+V60,35,%,<10% grade 3+ toxicity
+V65,25,%,<10% grade 3+ toxicity
+V70,20,%,<10% grade 3+ toxicity
+V75,15,%,<10% grade 3+ toxicity
+end,,,
+Small Bowel,0,,
+V15,120,cc,<10% grade 3+ toxicity
+end,,,
+Small Bowel Cavity,0,,
+V45,195,cc,<10% grade 3+ toxicity
+end,,,
+Spinal Cord,0,,
+Max,50,Gy,0.2% myelopathy
+Max,60,Gy,6% myelopathy
+Max,69,Gy,50% myelopathy
+end,,,
+Stomach,0,,
+Min,45,Gy,<7% ulceration
+end,,,
