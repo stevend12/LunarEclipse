@@ -1,3 +1,15 @@
+/******************************************************************************/
+//
+// DoseEval.cs
+// Eclipse Plan Dose Evaluation Script
+// Steven Dolly
+// Created: August 12, 2019
+//
+// This script evaluates the dose volume histograms from the current plan or
+// plan sum against a user-defined constraint list.
+//
+/******************************************************************************/
+
 using System;
 using System.Linq;
 using System.Text;
@@ -31,6 +43,8 @@ namespace VMS.TPS
     ComboBox groupSelectorMenu = new ComboBox();
     ComboBox protocolSelectorMenu = new ComboBox();
 
+    string mainFolder = System.IO.Path.GetDirectoryName(new System.Uri(System.Reflection.Assembly.GetExecutingAssembly().CodeBase).LocalPath);
+
     public void Execute(ScriptContext context, Window window)
     {
       ///////////////////////////////////////
@@ -57,27 +71,25 @@ namespace VMS.TPS
       ///////////////////////////////////////////////////////////////////
 
       // 2A. Have user choose constraint CSV file, then load file
-      string constraintFolder = "Constraint Data";
-      constraintFiles.AddRange(Directory.GetFiles(constraintFolder,"*.csv"));
+      string constraintFolder = mainFolder+"\\Constraint Data";
+      constraintFiles.AddRange(Directory.GetFiles(constraintFolder,"*.csv").Select(Path.GetFileName));
 
-      //List<string> subList = new List<string>();
-      //string[] initial = constraintFiles[0].Split('_');
-      //groupList.Add((initial[0].Split('\\'))[1]);
       for(int n = 0; n < constraintFiles.Count(); n++)
       {
         string[] words = constraintFiles[n].Split('_');
-        if(!groupList.Contains((words[0].Split('\\'))[1]))
+        if(!groupList.Contains(words[0]))
         {
-          groupList.Add((words[0].Split('\\'))[1]);
+          groupList.Add(words[0]);
         }
       }
+
       for(int g = 0; g < groupList.Count(); g++)
       {
         List<string> subList = new List<string>();
         for(int n = 0; n < constraintFiles.Count(); n++)
         {
           string[] words = constraintFiles[n].Split('_');
-          if(groupList[g] == ((words[0].Split('\\'))[1]))
+          if(groupList[g] == (words[0]))
           {
             subList.Add(words[1].Remove(words[1].Count()-4));
           }
@@ -87,11 +99,8 @@ namespace VMS.TPS
 
       // 2B. For each structure in constraint file, find mathing plan structure
       // and compare constraints; return results as data grid
-      // Data binding
       doseDataGrid.AutoGeneratingColumn += DDG_AutoGeneratingColumn;
-      //string missingText = EvaluateConstraints(context, file, doseDataGrid);
       string missingText = "Choose a constraint";
-      // User input (none)
       doseDataGrid.IsReadOnly = true;
       doseDataGrid.CanUserAddRows = false;
       // Display
@@ -169,7 +178,7 @@ namespace VMS.TPS
       //////////////////////////////////////
       // 3. Display results in new window //
       //////////////////////////////////////
-      window.Title = "Dose Check";
+      window.Title = "DoseEval";
       //window.Closing += new System.ComponentModel.CancelEventHandler(OnWindowClosing);
       //window.Background = System.Windows.Media.Brushes.Cornsilk;
       window.Height = 600;
@@ -190,8 +199,8 @@ namespace VMS.TPS
     private void OnClick1(object sender, RoutedEventArgs e,
         ScriptContext context)
     {
-      string file = "Constraint Data\\" + groupSelectorMenu.SelectedValue + '_'
-          + protocolSelectorMenu.SelectedValue + ".csv";
+      string file = mainFolder + "\\Constraint Data\\" +
+          groupSelectorMenu.SelectedValue + '_' + protocolSelectorMenu.SelectedValue + ".csv";
       if(File.Exists(file))
       {
         btn1.Background = System.Windows.Media.Brushes.LightBlue;
@@ -370,6 +379,7 @@ namespace VMS.TPS
         {
           for(int o = 0; o < pNames.Count(); o++)
           {
+            string nameToCheck = pNames[o].Replace('_',' ');
             var checkList = new List<string>();
             checkList.AddRange(dictionary[dictionary_id]);
             if(bilateral)
@@ -391,7 +401,7 @@ namespace VMS.TPS
                 checkList.Add(checkList[l]+" Right");
               }
             }
-            if(checkList.Contains(pNames[o],
+            if(checkList.Contains(nameToCheck,
                 StringComparer.OrdinalIgnoreCase)) tempList.Add(pNames[o]);
           }
         }
@@ -429,7 +439,7 @@ namespace VMS.TPS
 
       // Load QUANTEC dose constraint data and dictionary
       List<ConstraintData> Constraints = LoadConstraintData(filename);
-      string d_file = "\\\\s000-PO2\\POCommon\\SSM Cancer Care\\DOSIMETRY\\Eclipse Scripting\\OrganDictionary.csv";
+      string d_file = mainFolder+"\\Resources\\OrganDictionary.csv";
       List< List<string> > Dictionary = LoadDictionary(d_file);
 
       // Make list of plan structure names
