@@ -43,6 +43,8 @@ namespace VMS.TPS
     ComboBox groupSelectorMenu = new ComboBox();
     ComboBox protocolSelectorMenu = new ComboBox();
 
+    string mainFolder = System.IO.Path.GetDirectoryName(new System.Uri(System.Reflection.Assembly.GetExecutingAssembly().CodeBase).LocalPath);
+
     public void Execute(ScriptContext context, Window window)
     {
       ///////////////////////////////////////
@@ -64,38 +66,30 @@ namespace VMS.TPS
         return;
       }
 
-      MessageBox.Show(
-          //System.Reflection.Assembly.GetExecutingAssembly().Location+'\n'+
-          //Directory.GetCurrentDirectory()+'\n'+
-          Path.GetDirectoryName(Environment.GetCommandLineArgs()[0])+'\n'+
-          AppDomain.CurrentDomain.BaseDirectory
-          //Environment.CurrentDirectory
-      );
-
-
       ///////////////////////////////////////////////////////////////////
       // 2. Load constraints from CSV file and compare to current plan //
       ///////////////////////////////////////////////////////////////////
 
       // 2A. Have user choose constraint CSV file, then load file
-      string constraintFolder = "./Constraint Data";
-      constraintFiles.AddRange(Directory.GetFiles(constraintFolder,"*.csv"));
+      string constraintFolder = mainFolder+"\\Constraint Data";
+      constraintFiles.AddRange(Directory.GetFiles(constraintFolder,"*.csv").Select(Path.GetFileName));
 
       for(int n = 0; n < constraintFiles.Count(); n++)
       {
         string[] words = constraintFiles[n].Split('_');
-        if(!groupList.Contains((words[0].Split('\\'))[1]))
+        if(!groupList.Contains(words[0]))
         {
-          groupList.Add((words[0].Split('\\'))[1]);
+          groupList.Add(words[0]);
         }
       }
+
       for(int g = 0; g < groupList.Count(); g++)
       {
         List<string> subList = new List<string>();
         for(int n = 0; n < constraintFiles.Count(); n++)
         {
           string[] words = constraintFiles[n].Split('_');
-          if(groupList[g] == ((words[0].Split('\\'))[1]))
+          if(groupList[g] == (words[0]))
           {
             subList.Add(words[1].Remove(words[1].Count()-4));
           }
@@ -205,7 +199,7 @@ namespace VMS.TPS
     private void OnClick1(object sender, RoutedEventArgs e,
         ScriptContext context)
     {
-      string file = "Constraint Data\\" +
+      string file = mainFolder + "\\Constraint Data\\" +
           groupSelectorMenu.SelectedValue + '_' + protocolSelectorMenu.SelectedValue + ".csv";
       if(File.Exists(file))
       {
@@ -445,7 +439,7 @@ namespace VMS.TPS
 
       // Load QUANTEC dose constraint data and dictionary
       List<ConstraintData> Constraints = LoadConstraintData(filename);
-      string d_file = "./Resources/OrganDictionary.csv";
+      string d_file = mainFolder+"\\Resources\\OrganDictionary.csv";
       List< List<string> > Dictionary = LoadDictionary(d_file);
 
       // Make list of plan structure names
