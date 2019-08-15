@@ -1,3 +1,15 @@
+/******************************************************************************/
+//
+// DoseEval.cs
+// Eclipse Plan Dose Evaluation Script
+// Steven Dolly
+// Created: August 12, 2019
+//
+// This script evaluates the dose volume histograms from the current plan or
+// plan sum against a user-defined constraint list.
+//
+/******************************************************************************/
+
 using System;
 using System.Linq;
 using System.Text;
@@ -52,17 +64,23 @@ namespace VMS.TPS
         return;
       }
 
+      MessageBox.Show(
+          //System.Reflection.Assembly.GetExecutingAssembly().Location+'\n'+
+          //Directory.GetCurrentDirectory()+'\n'+
+          Path.GetDirectoryName(Environment.GetCommandLineArgs()[0])+'\n'+
+          AppDomain.CurrentDomain.BaseDirectory
+          //Environment.CurrentDirectory
+      );
+
+
       ///////////////////////////////////////////////////////////////////
       // 2. Load constraints from CSV file and compare to current plan //
       ///////////////////////////////////////////////////////////////////
 
       // 2A. Have user choose constraint CSV file, then load file
-      string constraintFolder = "Constraint Data";
+      string constraintFolder = "./Constraint Data";
       constraintFiles.AddRange(Directory.GetFiles(constraintFolder,"*.csv"));
 
-      //List<string> subList = new List<string>();
-      //string[] initial = constraintFiles[0].Split('_');
-      //groupList.Add((initial[0].Split('\\'))[1]);
       for(int n = 0; n < constraintFiles.Count(); n++)
       {
         string[] words = constraintFiles[n].Split('_');
@@ -87,11 +105,8 @@ namespace VMS.TPS
 
       // 2B. For each structure in constraint file, find mathing plan structure
       // and compare constraints; return results as data grid
-      // Data binding
       doseDataGrid.AutoGeneratingColumn += DDG_AutoGeneratingColumn;
-      //string missingText = EvaluateConstraints(context, file, doseDataGrid);
       string missingText = "Choose a constraint";
-      // User input (none)
       doseDataGrid.IsReadOnly = true;
       doseDataGrid.CanUserAddRows = false;
       // Display
@@ -169,7 +184,7 @@ namespace VMS.TPS
       //////////////////////////////////////
       // 3. Display results in new window //
       //////////////////////////////////////
-      window.Title = "Dose Check";
+      window.Title = "DoseEval";
       //window.Closing += new System.ComponentModel.CancelEventHandler(OnWindowClosing);
       //window.Background = System.Windows.Media.Brushes.Cornsilk;
       window.Height = 600;
@@ -190,8 +205,8 @@ namespace VMS.TPS
     private void OnClick1(object sender, RoutedEventArgs e,
         ScriptContext context)
     {
-      string file = "Constraint Data\\" + groupSelectorMenu.SelectedValue + '_'
-          + protocolSelectorMenu.SelectedValue + ".csv";
+      string file = "Constraint Data\\" +
+          groupSelectorMenu.SelectedValue + '_' + protocolSelectorMenu.SelectedValue + ".csv";
       if(File.Exists(file))
       {
         btn1.Background = System.Windows.Media.Brushes.LightBlue;
@@ -370,6 +385,7 @@ namespace VMS.TPS
         {
           for(int o = 0; o < pNames.Count(); o++)
           {
+            string nameToCheck = pNames[o].Replace('_',' ');
             var checkList = new List<string>();
             checkList.AddRange(dictionary[dictionary_id]);
             if(bilateral)
@@ -391,7 +407,7 @@ namespace VMS.TPS
                 checkList.Add(checkList[l]+" Right");
               }
             }
-            if(checkList.Contains(pNames[o],
+            if(checkList.Contains(nameToCheck,
                 StringComparer.OrdinalIgnoreCase)) tempList.Add(pNames[o]);
           }
         }
@@ -429,7 +445,7 @@ namespace VMS.TPS
 
       // Load QUANTEC dose constraint data and dictionary
       List<ConstraintData> Constraints = LoadConstraintData(filename);
-      string d_file = "\\\\s000-PO2\\POCommon\\SSM Cancer Care\\DOSIMETRY\\Eclipse Scripting\\OrganDictionary.csv";
+      string d_file = "./Resources/OrganDictionary.csv";
       List< List<string> > Dictionary = LoadDictionary(d_file);
 
       // Make list of plan structure names
