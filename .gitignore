@@ -1,0 +1,7 @@
+# Git ignore file for LunarEclipse repository
+
+# Ignore build directory
+Build/
+
+# Ignore all proprietary Varian DLLs found locally
+VMS.*.dll

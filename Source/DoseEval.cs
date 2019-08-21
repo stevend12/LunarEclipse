@@ -72,6 +72,7 @@ namespace VMS.TPS
 
       // 2A. Have user choose constraint CSV file, then load file
       string constraintFolder = mainFolder+"\\Constraint Data";
+      if(!Directory.Exists(constraintFolder)) constraintFolder = "Constraint Data";
       constraintFiles.AddRange(Directory.GetFiles(constraintFolder,"*.csv").Select(Path.GetFileName));
 
       for(int n = 0; n < constraintFiles.Count(); n++)
@@ -199,8 +200,10 @@ namespace VMS.TPS
     private void OnClick1(object sender, RoutedEventArgs e,
         ScriptContext context)
     {
-      string file = mainFolder + "\\Constraint Data\\" +
-          groupSelectorMenu.SelectedValue + '_' + protocolSelectorMenu.SelectedValue + ".csv";
+      string folder = mainFolder+"\\Constraint Data\\";
+      if(!Directory.Exists(folder)) folder = "Constraint Data\\";
+      string file = folder + groupSelectorMenu.SelectedValue + '_' +
+          protocolSelectorMenu.SelectedValue + ".csv";
       if(File.Exists(file))
       {
         btn1.Background = System.Windows.Media.Brushes.LightBlue;
@@ -440,6 +443,7 @@ namespace VMS.TPS
       // Load QUANTEC dose constraint data and dictionary
       List<ConstraintData> Constraints = LoadConstraintData(filename);
       string d_file = mainFolder+"\\Resources\\OrganDictionary.csv";
+      if(!File.Exists(d_file)) d_file = "Resources\\OrganDictionary.csv";
       List< List<string> > Dictionary = LoadDictionary(d_file);
 
       // Make list of plan structure names
