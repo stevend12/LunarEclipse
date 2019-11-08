@@ -2,8 +2,8 @@
 
 :: Copy all relevant data folders from Source to Build Folder
 if not exist Build mkdir Build
-xcopy /s /e .\Source\Resources .\Build\Resources\
-xcopy /s /e ".\Source\Constraint Data" ".\Build\Constraint Data\"
+xcopy /s /e /y .\Source\Resources .\Build\Resources\
+xcopy /s /e /y ".\Source\Constraint Data" ".\Build\Constraint Data\"
 
 :: Set common C# compiler resources as variables
 SET VarianRes=/r:VMS.TPS.Common.Model.API.dll /r:VMS.TPS.Common.Model.Types.dll

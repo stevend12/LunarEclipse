@@ -14,6 +14,7 @@ using System;
 using System.Linq;
 using System.Text;
 using System.Windows;
+using System.Windows.Data;
 using System.IO;
 using System.Collections.Generic;
 using VMS.TPS.Common.Model.API;
@@ -45,6 +46,27 @@ namespace VMS.TPS
 
     string mainFolder = System.IO.Path.GetDirectoryName(new System.Uri(System.Reflection.Assembly.GetExecutingAssembly().CodeBase).LocalPath);
 
+    public class PassFailBrushConverter : IValueConverter
+    {
+      public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+      {
+        string input = value as string;
+        switch(input)
+        {
+          case "Pass":
+            return System.Windows.Media.Brushes.Green;
+          case "Fail":
+            return System.Windows.Media.Brushes.Red;
+          default:
+            return System.Windows.Media.Brushes.Blue;
+        }
+      }
+      public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+      {
+        throw new NotSupportedException();
+      }
+    }
+
     public void Execute(ScriptContext context, Window window)
     {
       ///////////////////////////////////////
@@ -63,6 +85,11 @@ namespace VMS.TPS
       if (SelectedPlanningItem.Dose == null)
       {
         MessageBox.Show("Error: No calculated dose");
+        return;
+      }
+      if (SelectedStructureSet == null)
+      {
+        MessageBox.Show("Error: Could not find a structure set");
         return;
       }
 
@@ -105,8 +132,8 @@ namespace VMS.TPS
       doseDataGrid.IsReadOnly = true;
       doseDataGrid.CanUserAddRows = false;
       // Display
-      doseDataGrid.MaxHeight = 500;
-      doseDataGrid.Width = 850;
+      doseDataGrid.MaxHeight = 700;
+      doseDataGrid.Width = 880;
       doseDataGrid.AlternationCount = 2;
       doseDataGrid.RowBackground = System.Windows.Media.Brushes.Ivory;
       doseDataGrid.AlternatingRowBackground = System.Windows.Media.Brushes.PowderBlue;
@@ -182,8 +209,8 @@ namespace VMS.TPS
       window.Title = "DoseEval";
       //window.Closing += new System.ComponentModel.CancelEventHandler(OnWindowClosing);
       //window.Background = System.Windows.Media.Brushes.Cornsilk;
-      window.Height = 600;
-      window.Width = 875;
+      window.Height = 800;
+      window.Width = 900;
       StackPanel rootPanel = new StackPanel();
       rootPanel.Orientation = Orientation.Vertical;
       rootPanel.Children.Add(allSelector);
@@ -256,28 +283,39 @@ namespace VMS.TPS
       }
       if (headername == "ConstraintName")
       {
-        e.Column.Header = "Constraint Name";
-        e.Column.Width = 110;
+        e.Column.Header = "Constraint";
+        e.Column.Width = 75;
       }
       if (headername == "ConstraintValue")
       {
-        e.Column.Header = "Constraint Value";
-        e.Column.Width = 110;
+        e.Column.Header = "Value";
+        e.Column.Width = 75;
       }
       if (headername == "PlanValue")
       {
         e.Column.Header = "Plan Value";
-        e.Column.Width = 80;
+        e.Column.Width = 75;
       }
       if (headername == "PassFail")
       {
         e.Column.Header = "Pass/Fail";
-        e.Column.Width = 80;
+        e.Column.Width = 75;
+
+        DataGridTextColumn tCol = (DataGridTextColumn)e.Column;
+        Style myStyle = new Style(typeof(TextBlock));
+        Binding b = new Binding();
+        b.RelativeSource = RelativeSource.Self;
+        b.Path = new PropertyPath(TextBlock.TextProperty);
+        b.Converter = new PassFailBrushConverter();
+        myStyle.Setters.Add(new Setter(TextBlock.ForegroundProperty, b));
+        tCol.ElementStyle = myStyle;
+
+        e.Column = tCol;
       }
       if (headername == "ConstraintComplication")
       {
         e.Column.Header = "Notes";
-        e.Column.Width = 240;
+        e.Column.Width = 340;
       }
     }
 
@@ -286,12 +324,14 @@ namespace VMS.TPS
       public string OrganName { get; set; }
       public bool Bilateral;
       public List<string> ConstraintList { get; set; }
+      public List<string> ConstraintComparators { get; set; }
       public List<double> ConstraintValues { get; set; }
       public List<string> ConstraintUnits { get; set; }
       public List<string> ConstraintComplications { get; set; }
 
       public ConstraintData() {
         ConstraintList = new List<string>();
+        ConstraintComparators = new List<string>();
         ConstraintValues = new List<double>();
         ConstraintUnits = new List<string>();
         ConstraintComplications = new List<string>();
@@ -316,9 +356,10 @@ namespace VMS.TPS
           while(fields[0] != "end")
           {
             tempConstraint.ConstraintList.Add(fields[0]);
-            tempConstraint.ConstraintValues.Add(Convert.ToDouble(fields[1]));
-            tempConstraint.ConstraintUnits.Add(fields[2]);
-            tempConstraint.ConstraintComplications.Add(fields[3]);
+            tempConstraint.ConstraintComparators.Add(fields[1]);
+            tempConstraint.ConstraintValues.Add(Convert.ToDouble(fields[2]));
+            tempConstraint.ConstraintUnits.Add(fields[3]);
+            tempConstraint.ConstraintComplications.Add(fields[4]);
             fields = reader.ReadLine().Split(',');
           }
           data.Add(tempConstraint);
@@ -435,10 +476,12 @@ namespace VMS.TPS
       PlanSum psum = context.PlanSumsInScope.FirstOrDefault();
       SelectedPlanningItem = plan != null ? (PlanningItem)plan : (PlanningItem)psum;
       // Plans in plansum can have different structuresets but here we only use structureset to allow chosing one structure
-      SelectedStructureSet = plan != null ? plan.StructureSet : psum.PlanSetups.First().StructureSet;
+      //SelectedStructureSet = plan != null ? plan.StructureSet : psum.PlanSetups.First().StructureSet;
+      SelectedStructureSet = plan != null ? plan.StructureSet : psum.StructureSet;
       double cValue, pValue;
-
-      string missingList = "Constraints Missing:\n";
+      //MessageBox.Show(SelectedStructureSet.Id);
+      string excludedList = "Constraints Excluded:\n";
+      bool any_missing = false;
 
       // Load QUANTEC dose constraint data and dictionary
       List<ConstraintData> Constraints = LoadConstraintData(filename);
@@ -449,7 +492,6 @@ namespace VMS.TPS
       // Make list of plan structure names
       List<string> PlanNames = new List<string>();
       foreach(var s in SelectedStructureSet.Structures) PlanNames.Add(s.Id);
-
       // For each organ constraint, see if any plan structure names match
       // If so, compare constraint and add to list
       List<PlanComparison> results = new List<PlanComparison>();
@@ -460,7 +502,8 @@ namespace VMS.TPS
             Constraints[n].Bilateral, PlanNames, Dictionary);
         if(matchNames[0] == "None")
         {
-          missingList += (Constraints[n].OrganName+", ");
+          excludedList += (Constraints[n].OrganName+", ");
+          any_missing = true;
           continue;
         }
         // If matching plan structure name found, compare constraint(s)
@@ -502,21 +545,43 @@ namespace VMS.TPS
             else
             {
               string current = Constraints[n].ConstraintList[p];
-              double doseValue = Convert.ToDouble(current.Substring(1));
-              pValue = MyDVH.VolumeAtDose(dvhData, doseValue*100.0);
-              tempResult.PlanValue = pValue.ToString("F1")+" "+Constraints[n].ConstraintUnits[p];
+              double cNumber = Convert.ToDouble(current.Substring(1));
+              if(current[0] == 'V')
+              {
+                if(Constraints[n].ConstraintUnits[p] == "cc")
+                {
+                  pValue = MyDVH.VolumeAtDose(dvhData, cNumber*100.0, true);
+                }
+                else pValue = MyDVH.VolumeAtDose(dvhData, cNumber*100.0);
+                tempResult.PlanValue = pValue.ToString("F1")+" "+Constraints[n].ConstraintUnits[p];
+              }
+              else
+              {
+                pValue = (MyDVH.DoseAtVolume(dvhData, cNumber)).Dose / 100.0;
+                tempResult.PlanValue = pValue.ToString("F1")+" "+Constraints[n].ConstraintUnits[p];
+              }
             }
             // Compare plan and constraint values
-            if(cValue >= pValue) tempResult.PassFail = "Pass";
-            else tempResult.PassFail = "Fail";
-
+            if (Constraints[n].ConstraintComparators[p] == "<")
+            {
+              if(cValue >= pValue) tempResult.PassFail = "Pass";
+              else tempResult.PassFail = "Fail";
+            }
+            else
+            {
+              if(cValue <= pValue) tempResult.PassFail = "Pass";
+              else tempResult.PassFail = "Fail";
+            }
+            tempResult.ConstraintName += " (" + Constraints[n].ConstraintComparators[p] + ")";
             results.Add(tempResult);
           }
         }
       }
 
       data.ItemsSource = results;
-      return missingList.Remove(missingList.Count()-2);
+      if(any_missing) excludedList = excludedList.Remove(excludedList.Count()-2);
+      else excludedList += ("None");
+      return excludedList;
     }
   }
 
@@ -537,14 +602,20 @@ namespace VMS.TPS
       return DoseValue.UndefinedDose();
     }
 
-    public static double VolumeAtDose(DVHData dvhData, double dose)
+    public static double VolumeAtDose(DVHData dvhData, double dose, bool absolute = false)
     {
-        if (dvhData == null) return Double.NaN;
+      if (dvhData == null) return Double.NaN;
 
-        DVHPoint[] hist = dvhData.CurveData;
-        int index = (int)(hist.Length * dose / dvhData.MaxDose.Dose);
-        if (index < 0 || index > hist.Length) return 0.0;
-        else return hist[index].Volume;
+      DVHPoint[] hist = dvhData.CurveData;
+      int index = (int)(hist.Length * dose / dvhData.MaxDose.Dose);
+      if (index < 0 || index > hist.Length) return 0.0;
+      else
+      {
+        double relVolume = hist[index].Volume;
+        double absVolume = relVolume * dvhData.Volume * 0.01;
+        if(absolute) return absVolume;
+        else return relVolume;
+      }
     }
   }
 }
