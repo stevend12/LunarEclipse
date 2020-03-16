@@ -58,7 +58,7 @@ namespace VMS.TPS
           case "Fail":
             return System.Windows.Media.Brushes.Red;
           default:
-            return System.Windows.Media.Brushes.Blue;
+            return System.Windows.Media.Brushes.Black;
         }
       }
       public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
