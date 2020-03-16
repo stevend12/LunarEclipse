@@ -13,3 +13,6 @@ SET WpfRes=/r:WPF\PresentationCore.dll /r:WPF\PresentationFramework.dll^
 :: Compile each C# script as an ESAPI DLL to use in Eclipse
 csc.exe /target:library /out:.\Build\DoseEval.esapi.dll .\Source\DoseEval.cs^
  %VarianRes% %WpfRes%
+
+csc.exe /target:library /out:.\Build\PlanScan.esapi.dll .\Source\PlanScan.cs^
+ %VarianRes% %WpfRes%

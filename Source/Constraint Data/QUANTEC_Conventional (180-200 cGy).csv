@@ -30,7 +30,10 @@ end,,,,
 Kidneys,0,,,
 Mean,<,15,Gy,<5% clinical dysfunction
 Mean,<,28,Gy,<50% clinical dysfunction
-Mean,<,28,Gy,<50% clinical dysfunction
+V12,<,55,%,<5% clinical dysfunction
+V20,<,32,%,<5% clinical dysfunction
+V23,<,30,%,<5% clinical dysfunction
+V28,<,20,%,<5% clinical dysfunction
 end,,,,
 Larynx,0,,,
 Max,<,66,Gy,<20% vocal dysfunction
