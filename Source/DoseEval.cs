@@ -491,7 +491,10 @@ namespace VMS.TPS
 
       // Make list of plan structure names
       List<string> PlanNames = new List<string>();
-      foreach(var s in SelectedStructureSet.Structures) PlanNames.Add(s.Id);
+      foreach(var s in SelectedStructureSet.Structures)
+      {
+        if(!s.IsEmpty) PlanNames.Add(s.Id);
+      }
       // For each organ constraint, see if any plan structure names match
       // If so, compare constraint and add to list
       List<PlanComparison> results = new List<PlanComparison>();
