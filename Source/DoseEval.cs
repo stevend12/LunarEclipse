@@ -40,9 +40,11 @@ namespace VMS.TPS
     List<string> constraintFiles = new List<string>();
     List<string> groupList = new List<string>();
     List< List<string> > protocolList = new List< List<string> >();
+    List<string> planList = new List<string>();
 
     ComboBox groupSelectorMenu = new ComboBox();
     ComboBox protocolSelectorMenu = new ComboBox();
+    ComboBox planSelectorMenu = new ComboBox();
 
     string mainFolder = System.IO.Path.GetDirectoryName(new System.Uri(System.Reflection.Assembly.GetExecutingAssembly().CodeBase).LocalPath);
 
@@ -69,9 +71,9 @@ namespace VMS.TPS
 
     public void Execute(ScriptContext context, Window window)
     {
-      ///////////////////////////////////////
-      // 1. Check for valid plan with dose //
-      ///////////////////////////////////////
+      ////////////////////////////////////////////////////////////////
+      // 1. Check for valid plan or plan sum, then make list of all //
+      ////////////////////////////////////////////////////////////////
       PlanSetup plan = context.PlanSetup;
       PlanSum psum = context.PlanSumsInScope.FirstOrDefault();
       if(plan == null && psum == null)
@@ -79,18 +81,14 @@ namespace VMS.TPS
         MessageBox.Show("Error: No plan or plan sum loaded");
         return;
       }
-      SelectedPlanningItem = plan != null ? (PlanningItem)plan : (PlanningItem)psum;
-      // Plans in plan sum can have different structure sets; use the first one
-      SelectedStructureSet = plan != null ? plan.StructureSet : psum.PlanSetups.First().StructureSet;
-      if (SelectedPlanningItem.Dose == null)
+      // Make list of all plans and plan sums
+      foreach(PlanSetup p in context.PlansInScope)
       {
-        MessageBox.Show("Error: No calculated dose");
-        return;
+        planList.Add(p.Id);
       }
-      if (SelectedStructureSet == null)
+      foreach(PlanSum s in context.PlanSumsInScope)
       {
-        MessageBox.Show("Error: Could not find a structure set");
-        return;
+        planList.Add(s.Id);
       }
 
       ///////////////////////////////////////////////////////////////////
@@ -151,11 +149,16 @@ namespace VMS.TPS
       allSelector.ColumnDefinitions.Add(colDef3);
       RowDefinition rowDef1 = new RowDefinition();
       RowDefinition rowDef2 = new RowDefinition();
+      RowDefinition rowDef3 = new RowDefinition();
       allSelector.RowDefinitions.Add(rowDef1);
       allSelector.RowDefinitions.Add(rowDef2);
+      allSelector.RowDefinitions.Add(rowDef3);
       //allSelector.ShowGridLines = true;
       //allSelector.Width = 400;
 
+      ////////////////////////////////////////////////////
+      // Dropdown and label to select constraint group. //
+      ////////////////////////////////////////////////////
       TextBlock groupSelectorLabel = new TextBlock();
       groupSelectorLabel.Text = "Physician/Protocol:";
       groupSelectorLabel.TextAlignment = TextAlignment.Right;
@@ -172,6 +175,9 @@ namespace VMS.TPS
       allSelector.Children.Add(groupSelectorLabel);
       allSelector.Children.Add(groupSelectorMenu);
 
+      ///////////////////////////////////////////////////////
+      // Dropdown and label to select constraint protocol. //
+      ///////////////////////////////////////////////////////
       TextBlock protocolSelectorLabel = new TextBlock();
       protocolSelectorLabel.Text = "Constraint Template:";
       protocolSelectorLabel.TextAlignment = TextAlignment.Right;
@@ -185,6 +191,27 @@ namespace VMS.TPS
       allSelector.Children.Add(protocolSelectorLabel);
       allSelector.Children.Add(protocolSelectorMenu);
 
+      /////////////////////////////////////////////////
+      // Dropdown and label to select plan/plan sum. //
+      /////////////////////////////////////////////////
+      TextBlock planSelectorLabel = new TextBlock();
+      planSelectorLabel.Text = "Selected Plan/Sum:";
+      planSelectorLabel.TextAlignment = TextAlignment.Right;
+      planSelectorLabel.VerticalAlignment = VerticalAlignment.Center;
+      planSelectorMenu.Margin = new Thickness(10, 10, 10, 10);
+      planSelectorMenu.ItemsSource = planList;
+      planSelectorMenu.SelectedIndex = 0;
+
+      Grid.SetRow(planSelectorLabel, 2);
+      Grid.SetColumn(planSelectorLabel, 0);
+      Grid.SetRow(planSelectorMenu, 2);
+      Grid.SetColumn(planSelectorMenu, 1);
+      allSelector.Children.Add(planSelectorLabel);
+      allSelector.Children.Add(planSelectorMenu);
+
+      ////////////////////////////////////////////////////////////
+      // Button to evaluate using selected constraint template. //
+      ////////////////////////////////////////////////////////////
       btn1.Content = "Evaluate";
       btn1.Margin = new Thickness(10, 10, 10, 10);
       btn1.Width = 200;
@@ -194,6 +221,9 @@ namespace VMS.TPS
       Grid.SetColumn(btn1, 2);
       allSelector.Children.Add(btn1);
 
+      /////////////////////////////////////////////////////////////
+      // Button to evaluate using constraint template from file. //
+      /////////////////////////////////////////////////////////////
       btn2.Content = "Evaluate From File";
       btn2.Margin = new Thickness(10, 10, 10, 10);
       btn2.Width = 200;
@@ -471,15 +501,34 @@ namespace VMS.TPS
     private string EvaluateConstraints(ScriptContext context,
         string filename, DataGrid data)
     {
-      // Calculation variables
-      PlanSetup plan = context.PlanSetup;
-      PlanSum psum = context.PlanSumsInScope.FirstOrDefault();
+      // Load plan/sum based on user input; check for valid dose and structures
+      PlanSetup plan = null;
+      PlanSum psum = null;
+      foreach(PlanSetup p in context.PlansInScope)
+      {
+        if(p.Id == planList[planSelectorMenu.SelectedIndex]) plan = p;
+      }
+      foreach(PlanSum s in context.PlanSumsInScope)
+      {
+        if(s.Id == planList[planSelectorMenu.SelectedIndex]) psum = s;
+      }
       SelectedPlanningItem = plan != null ? (PlanningItem)plan : (PlanningItem)psum;
       // Plans in plansum can have different structuresets but here we only use structureset to allow chosing one structure
       //SelectedStructureSet = plan != null ? plan.StructureSet : psum.PlanSetups.First().StructureSet;
       SelectedStructureSet = plan != null ? plan.StructureSet : psum.StructureSet;
+      if (SelectedPlanningItem.Dose == null)
+      {
+        MessageBox.Show("Error: No calculated dose");
+        return "Error: No calculated dose";
+      }
+      if (SelectedStructureSet == null)
+      {
+        MessageBox.Show("Error: Could not find a structure set");
+        return "Error: Could not find a structure set";
+      }
+
+      // Other calculation variables
       double cValue, pValue;
-      //MessageBox.Show(SelectedStructureSet.Id);
       string excludedList = "Constraints Excluded:\n";
       bool any_missing = false;
 
@@ -491,7 +540,10 @@ namespace VMS.TPS
 
       // Make list of plan structure names
       List<string> PlanNames = new List<string>();
-      foreach(var s in SelectedStructureSet.Structures) PlanNames.Add(s.Id);
+      foreach(var s in SelectedStructureSet.Structures)
+      {
+        if(!s.IsEmpty) PlanNames.Add(s.Id);
+      }
       // For each organ constraint, see if any plan structure names match
       // If so, compare constraint and add to list
       List<PlanComparison> results = new List<PlanComparison>();

@@ -32,9 +32,10 @@ namespace VMS.TPS
 
       // Grab and evaluate plan info
       Grid planInfoGrid = MakeInfoGrid(context, plan);
-      Grid planScanGrid = MakePlanScanGrid(context, plan);
-      Grid planBeamGrid = MakeBeamGrid(context, plan);
-      Grid MiscellaneousGrid = MakeMiscGrid(context, plan);
+      Grid generalCheckGrid = MakeGeneralCheckGrid(context, plan);
+      Grid densityOverrideGrid = MakeDensityOverrideGrid(context, plan);
+      Grid beamGrid = MakeBeamGrid(context, plan);
+      Grid miscellaneousGrid = MakeMiscGrid(context, plan);
 
       // Initialize window
       window.Title = "PlanScan";
@@ -44,9 +45,10 @@ namespace VMS.TPS
       StackPanel rootPanel = new StackPanel();
       //rootPanel.Orientation = Orientation.Vertical;
       rootPanel.Children.Add(planInfoGrid);
-      rootPanel.Children.Add(planScanGrid);
-      rootPanel.Children.Add(planBeamGrid);
-      rootPanel.Children.Add(MiscellaneousGrid);
+      rootPanel.Children.Add(generalCheckGrid);
+      rootPanel.Children.Add(densityOverrideGrid);
+      rootPanel.Children.Add(beamGrid);
+      rootPanel.Children.Add(miscellaneousGrid);
       mainView.Content = rootPanel;
       window.Content = mainView;
     }
@@ -95,7 +97,7 @@ namespace VMS.TPS
       return infoGrid;
     }
 
-    public Grid MakePlanScanGrid(ScriptContext context, PlanSetup plan)
+    public Grid MakeGeneralCheckGrid(ScriptContext context, PlanSetup plan)
     {
       // Make list of checks
       List<string> planScanText = new List<string>();
@@ -254,6 +256,100 @@ namespace VMS.TPS
       }
 
       return mGrid;
+    }
+
+    public Grid MakeDensityOverrideGrid(ScriptContext context, PlanSetup plan)
+    {
+      // Find all boluses
+      int n_beams = 0;
+      List<string> bolusList = new List<string>();
+      foreach(Beam b in plan.Beams)
+      {
+        if(!b.IsSetupField) n_beams++;
+        if(b.Boluses.Count() > 0)
+        {
+          foreach(Bolus bol in b.Boluses)
+          {
+            bolusList.Add(bol.Id);
+          }
+        }
+      }
+      List<string> bolusUnique = new List<string>();
+      List<string> bolusNote = new List<string>();
+      var g = bolusList.GroupBy(i => i);
+      foreach(var grp in g)
+      {
+        bolusUnique.Add(grp.Key);
+        bolusNote.Add(String.Format("Bolus attached to {0}/{0} beams", grp.Count(), n_beams));
+      }
+      // Load density override information and check bolus attachment
+      double huValue;
+      List<string> overrideText = new List<string>();
+      overrideText.Add("Structure");
+      overrideText.Add("Assigned HU");
+      overrideText.Add("Bolus Note");
+      foreach(Structure s in plan.StructureSet.Structures)
+      {
+        if(s.GetAssignedHU(out huValue))
+        {
+          overrideText.Add(s.Id);
+          overrideText.Add(huValue.ToString("0"));
+          if(bolusUnique.Contains(s.Id))
+          {
+            overrideText.Add(bolusNote[bolusUnique.FindIndex(x => x == s.Id)]);
+          }
+          else overrideText.Add("NA");
+        }
+      }
+
+      /////////////////////////////
+      // Make grid to store text //
+      /////////////////////////////
+      Grid dGrid = new Grid();
+      //mGrid.ShowGridLines = true;
+      //mGrid.HorizontalAlignment = HorizontalAlignment.Center;
+      dGrid.VerticalAlignment = VerticalAlignment.Top;
+      dGrid.Margin = new Thickness(16.0);
+      double[] dg_widths = new double[3] {150.0, 100.0, 200.0};
+      for(int n = 0; n < 3; n++)
+      {
+        ColumnDefinition cDef = new ColumnDefinition();
+        cDef.Width = new GridLength(dg_widths[n]);
+        dGrid.ColumnDefinitions.Add(cDef);
+      }
+      for(int n = 0; n < overrideText.Count/3 + 1; n++)
+      {
+        RowDefinition rDef = new RowDefinition();
+        if(n==0) rDef.Height = new GridLength(36.0);
+        else rDef.Height = new GridLength(20.0);
+        dGrid.RowDefinitions.Add(rDef);
+      }
+      // Grid Title
+      TextBlock title = new TextBlock();
+      title.Text = "Density Overrides & Bolus";
+      title.VerticalAlignment = VerticalAlignment.Center;
+      //title.HorizontalAlignment = HorizontalAlignment.Center;
+      title.Height = 36.0;
+      title.FontSize = 16;
+      title.FontWeight = FontWeights.Bold;
+      Grid.SetColumn(title, 0);
+      Grid.SetRow(title, 0);
+      Grid.SetColumnSpan(title, 3);
+      dGrid.Children.Add(title);
+      // Grid Table elements
+      for(int n = 0; n < overrideText.Count; n++)
+      {
+        TextBlock txtblk = new TextBlock();
+        txtblk.Text = overrideText[n];
+        txtblk.VerticalAlignment = VerticalAlignment.Center;
+        //txtblk.FontSize = 14;
+        if(n < 3) txtblk.FontWeight = FontWeights.Bold;
+        Grid.SetRow(txtblk, n/3 + 1);
+        Grid.SetColumn(txtblk, n%3);
+        dGrid.Children.Add(txtblk);
+      }
+
+      return dGrid;
     }
 
     public Grid MakeBeamGrid(ScriptContext context, PlanSetup plan)
