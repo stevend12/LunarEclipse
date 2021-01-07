@@ -52,7 +52,8 @@ namespace VMS.TPS
         return;
       }
       SelectedStructureSet = plan != null ? plan.StructureSet : psum.StructureSet;
-      Structure bodyStructure = SelectedStructureSet.Structures.FirstOrDefault(s => s.Id == "BODY");
+      Structure bodyStructure = SelectedStructureSet.Structures.FirstOrDefault();
+      //Structure bodyStructure = SelectedStructureSet.Structures.FirstOrDefault(s => s.Id == "BODY");
       foreach(var s in SelectedStructureSet.Structures)
       {
         structureNames.Add(s.Id);
@@ -106,8 +107,9 @@ namespace VMS.TPS
       myViewport3D.Children.Add(myModelVisual3D);
 
       structureList.ItemsSource = structureNames;
-      structureList.SelectedIndex = 1;
+      structureList.SelectedIndex = 0;
       structureList.Height = 32;
+      structureList.Focusable = false;
       structureList.SelectionChanged += ChangeStructure;
 
       var mainGrid = new Grid();
@@ -151,12 +153,24 @@ namespace VMS.TPS
       DiffuseMaterial viewMaterial = new DiffuseMaterial(new SolidColorBrush(viewColor));
       viewGeometryModel.Material = viewMaterial;
       viewGeometryModel.BackMaterial = viewMaterial;
+      // Reset camera to point at new structure
+      PerspectiveCamera newPCamera = myViewport3D.Camera as PerspectiveCamera;
+      cameraRadius = 800.0;
+      cameraTheta = 90.0*(Math.PI/180.0);
+      cameraPhi = 0.0*(Math.PI/180.0);
+      cv = viewStructure.CenterPoint;
+      double cameraX = cv.x + cameraRadius*Math.Sin(cameraTheta)*Math.Cos(cameraPhi - Math.PI/2.0);
+      double cameraY = cv.y + cameraRadius*Math.Sin(cameraTheta)*Math.Sin(cameraPhi - Math.PI/2.0);
+      double cameraZ = cv.z + (cameraRadius * Math.Cos(cameraTheta));
+      newPCamera.Position = new Point3D(cameraX, cameraY, cameraZ);
+      newPCamera.LookDirection = new Vector3D(cv.x-cameraX, cv.y-cameraY, cv.z-cameraZ);
+      myViewport3D.Camera = newPCamera;
     }
 
     private void HandleKeyPressEvent(object sender, KeyEventArgs e)
     {
-      Key[] rotateCheck = new Key[]{Key.W, Key.S, Key.A, Key.D};
-      if(Array.Exists(rotateCheck, element => element == e.Key))
+      Key[] viewCheck = new Key[]{Key.W, Key.S, Key.A, Key.D, Key.Z, Key.X};
+      if(Array.Exists(viewCheck, element => element == e.Key))
       {
         // Adjust camera
         PerspectiveCamera newPCamera = myViewport3D.Camera as PerspectiveCamera;
@@ -164,6 +178,8 @@ namespace VMS.TPS
         if(e.Key == Key.S) cameraTheta += 5.0*(Math.PI/180.0);
         if(e.Key == Key.A) cameraPhi -= 5.0*(Math.PI/180.0);
         if(e.Key == Key.D) cameraPhi += 5.0*(Math.PI/180.0);
+        if(e.Key == Key.Z) cameraRadius -= 100.0;
+        if(e.Key == Key.X) cameraRadius += 100.0;
         double cameraX = cv.x + cameraRadius*Math.Sin(cameraTheta)*Math.Cos(cameraPhi - Math.PI/2.0);
         double cameraY = cv.y + cameraRadius*Math.Sin(cameraTheta)*Math.Sin(cameraPhi - Math.PI/2.0);
         double cameraZ = cv.z + (cameraRadius * Math.Cos(cameraTheta));
