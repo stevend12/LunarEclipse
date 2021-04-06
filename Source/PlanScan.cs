@@ -59,8 +59,8 @@ namespace VMS.TPS
         "Patient (ID)", context.Patient.LastName+", "+context.Patient.FirstName+" ("+context.Patient.Id+")",
         "Course", plan.Course.Id,
         "Plan", plan.Id,
-        "Prescription Dose (%)", plan.TotalPrescribedDose.ValueAsString+' '+plan.TotalPrescribedDose.UnitAsString+" ("+((100.0*plan.PrescribedPercentage).ToString())+" %)",
-        "Fractionation", plan.UniqueFractionation.PrescribedDosePerFraction+" x "+plan.UniqueFractionation.NumberOfFractions+" fractions"
+        "Prescription Dose (%)", plan.TotalDose.ValueAsString+' '+plan.TotalDose.UnitAsString+" ("+((100.0*plan.TreatmentPercentage).ToString())+" %)",
+        "Fractionation", plan.DosePerFraction+" x "+plan.NumberOfFractions+" fractions"
       };
 
       // Grid for basic patient information
