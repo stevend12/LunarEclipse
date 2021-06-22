@@ -136,6 +136,12 @@ namespace VMS.TPS
       planScanText.Add(plan.TreatmentOrientation.ToString());
       if(plan.StructureSet.Image.ImagingOrientation == plan.TreatmentOrientation) PassFail.Add(true);
       else PassFail.Add(false);
+      // Image CT-Density Table
+      planScanText.Add("Plan: Image CT-Density Table");
+      planScanText.Add(plan.StructureSet.Image.Series.ImagingDeviceId.ToString());
+      planScanText.Add("dct3");
+      if(plan.StructureSet.Image.Series.ImagingDeviceId.ToString() == "dct3") PassFail.Add(true);
+      else PassFail.Add(false);
       ////////////////////
       // Structure Info //
       ////////////////////
