@@ -298,7 +298,16 @@ namespace VMS.TPS
       //window.Closing += new System.ComponentModel.CancelEventHandler(OnWindowClosing);
       window.Height = 800;
       window.Width = 800;
-      window.Content = mainGrid;
+      ScrollViewer mainView = new ScrollViewer();
+      StackPanel rootPanel = new StackPanel();
+      rootPanel.Children.Add(mainGrid);
+      //rootPanel.Children.Add(generalCheckGrid);
+      //rootPanel.Children.Add(densityOverrideGrid);
+      //rootPanel.Children.Add(beamGrid);
+      //rootPanel.Children.Add(miscellaneousGrid);
+      mainView.Content = rootPanel;
+      window.Content = mainView;
+      //window.Content = mainGrid;
       window.KeyDown += HandleKeyPressEvent;
     }
 
