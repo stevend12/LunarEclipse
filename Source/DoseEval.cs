@@ -34,8 +34,9 @@ namespace VMS.TPS
 
     Button btn1 = new Button();
     Button btn2 = new Button();
+    Button btn3 = new Button();
     DataGrid doseDataGrid = new DataGrid();
-    string missingText;
+    string constraintFileName, missingText, mainFolder;
     TextBlock scriptNotes = new TextBlock();
     List<string> constraintFiles = new List<string>();
     List<string> groupList = new List<string>();
@@ -45,8 +46,6 @@ namespace VMS.TPS
     ComboBox groupSelectorMenu = new ComboBox();
     ComboBox protocolSelectorMenu = new ComboBox();
     ComboBox planSelectorMenu = new ComboBox();
-
-    string mainFolder = System.IO.Path.GetDirectoryName(new System.Uri(System.Reflection.Assembly.GetExecutingAssembly().CodeBase).LocalPath);
 
     public class PassFailBrushConverter : IValueConverter
     {
@@ -71,6 +70,19 @@ namespace VMS.TPS
 
     public void Execute(ScriptContext context, Window window)
     {
+      // Set system variables
+      mainFolder = System.IO.Path.GetDirectoryName(
+        new System.Uri(
+          System.Reflection.Assembly.GetExecutingAssembly().CodeBase
+        ).LocalPath
+      );
+       // Machine, User, or Process
+      EnvironmentVariableTarget scope = EnvironmentVariableTarget.Process;
+      string oldValue = Environment.GetEnvironmentVariable("PATH", scope);
+      string newValue  = oldValue + mainFolder;
+      MessageBox.Show(newValue);
+      Environment.SetEnvironmentVariable("PATH", newValue, scope);
+
       ////////////////////////////////////////////////////////////////
       // 1. Check for valid plan or plan sum, then make list of all //
       ////////////////////////////////////////////////////////////////
@@ -216,7 +228,7 @@ namespace VMS.TPS
       btn1.Margin = new Thickness(10, 10, 10, 10);
       btn1.Width = 200;
       btn1.Click += delegate(object sender, RoutedEventArgs e){
-          OnClick1(sender, e, context); };
+        OnClick1(sender, e, context); };
       Grid.SetRow(btn1, 0);
       Grid.SetColumn(btn1, 2);
       allSelector.Children.Add(btn1);
@@ -228,10 +240,22 @@ namespace VMS.TPS
       btn2.Margin = new Thickness(10, 10, 10, 10);
       btn2.Width = 200;
       btn2.Click += delegate(object sender, RoutedEventArgs e){
-          OnClick2(sender, e, context); };
+        OnClick2(sender, e, context); };
       Grid.SetRow(btn2, 1);
       Grid.SetColumn(btn2, 2);
       allSelector.Children.Add(btn2);
+
+      /////////////////////////////////
+      // Button to print PDF report. //
+      /////////////////////////////////
+      btn3.Content = "Print PDF Report";
+      btn3.Margin = new Thickness(10, 10, 10, 10);
+      btn3.Width = 200;
+      btn3.Click += delegate(object sender, RoutedEventArgs e){
+        OnClick3(sender, e, context); };
+      Grid.SetRow(btn3, 2);
+      Grid.SetColumn(btn3, 2);
+      allSelector.Children.Add(btn3);
 
       //////////////////////////////////////
       // 3. Display results in new window //
@@ -263,8 +287,11 @@ namespace VMS.TPS
           protocolSelectorMenu.SelectedValue + ".csv";
       if(File.Exists(file))
       {
+        constraintFileName = file;
         btn1.Background = System.Windows.Media.Brushes.LightBlue;
-        missingText = EvaluateConstraints(context, file, doseDataGrid);
+        List<PlanComparison> results = EvaluateConstraints(
+          context, constraintFileName, ref missingText);
+        doseDataGrid.ItemsSource = results;
         scriptNotes.Text = missingText;
       }
       else
@@ -289,11 +316,36 @@ namespace VMS.TPS
         MessageBox.Show("Error: No constraint file selected");
         return;
       }
-      var file = fileDialog.FileName;
+      constraintFileName = fileDialog.FileName;
 
       btn2.Background = System.Windows.Media.Brushes.LightBlue;
-      missingText = EvaluateConstraints(context, file, doseDataGrid);
+      List<PlanComparison> results = EvaluateConstraints(
+        context, constraintFileName, ref missingText);
+      doseDataGrid.ItemsSource = results;
       scriptNotes.Text = missingText;
+    }
+
+    private void OnClick3(object sender, RoutedEventArgs e,
+        ScriptContext context)
+    {
+      List<PlanComparison> results = EvaluateConstraints(
+        context, constraintFileName, ref missingText);
+
+      DoseEvalReportData ReportData = new DoseEvalReportData();
+      ReportData.LogoFileName = "SSM_Logo.jpg";
+      ReportData.DepartmentName = "Department Name";
+      ReportData.PatientName = context.Patient.Name;
+      ReportData.PatientID = context.Patient.Id;
+      ReportData.SummaryText =
+        "For Last, First, the following treatment planning constraints for "+
+        "target coverage and critical organ coverage were requested. After "+
+        "completing the planning process the plan constraints were assessed "+
+        "according to the list. After reviewing the plan constraints with the "+
+        "dosimetrist and physicist, the constraints have been approved.";
+      ReportData.ComparisonResults = results;
+
+      string FilePath = mainFolder + "\\TestReport.pdf";
+      ReportPrinter.DoseEval.CreateDoseEvalReport(ReportData, FilePath);
     }
 
     private void DDG_AutoGeneratingColumn(object sender, DataGridAutoGeneratingColumnEventArgs e)
@@ -357,14 +409,14 @@ namespace VMS.TPS
       public List<string> ConstraintComparators { get; set; }
       public List<double> ConstraintValues { get; set; }
       public List<string> ConstraintUnits { get; set; }
-      public List<string> ConstraintComplications { get; set; }
+      public List<string> ConstraintNotes { get; set; }
 
       public ConstraintData() {
         ConstraintList = new List<string>();
         ConstraintComparators = new List<string>();
         ConstraintValues = new List<double>();
         ConstraintUnits = new List<string>();
-        ConstraintComplications = new List<string>();
+        ConstraintNotes = new List<string>();
       }
     }
 
@@ -389,7 +441,7 @@ namespace VMS.TPS
             tempConstraint.ConstraintComparators.Add(fields[1]);
             tempConstraint.ConstraintValues.Add(Convert.ToDouble(fields[2]));
             tempConstraint.ConstraintUnits.Add(fields[3]);
-            tempConstraint.ConstraintComplications.Add(fields[4]);
+            tempConstraint.ConstraintNotes.Add(fields[4]);
             fields = reader.ReadLine().Split(',');
           }
           data.Add(tempConstraint);
@@ -495,12 +547,29 @@ namespace VMS.TPS
       public string ConstraintValue { get; set; }
       public string PlanValue { get; set; }
       public string PassFail { get; set; }
-      public string ConstraintComplication { get; set; }
+      public string ConstraintNote { get; set; }
     }
 
-    private string EvaluateConstraints(ScriptContext context,
-        string filename, DataGrid data)
+    public class DoseEvalReportData
     {
+      public string LogoFileName { get; set; }
+      public string DepartmentName { get; set; }
+      public string PatientName { get; set; }
+      public string PatientID { get; set; }
+      public string SummaryText { get; set; }
+      public List<PlanComparison> ComparisonResults { get; set; }
+
+      public DoseEvalReportData()
+      {
+        ComparisonResults = new List<PlanComparison>();
+      }
+    }
+
+    private List<PlanComparison> EvaluateConstraints(ScriptContext context,
+        string filename, ref string notes)
+    {
+      // Initialize return value
+      List<PlanComparison> results = new List<PlanComparison>();
       // Load plan/sum based on user input; check for valid dose and structures
       PlanSetup plan = null;
       PlanSum psum = null;
@@ -519,12 +588,14 @@ namespace VMS.TPS
       if (SelectedPlanningItem.Dose == null)
       {
         MessageBox.Show("Error: No calculated dose");
-        return "Error: No calculated dose";
+        notes = "Error: No calculated dose";
+        return results;
       }
       if (SelectedStructureSet == null)
       {
         MessageBox.Show("Error: Could not find a structure set");
-        return "Error: Could not find a structure set";
+        notes = "Error: Could not find a structure set";
+        return results;
       }
 
       // Other calculation variables
@@ -546,7 +617,6 @@ namespace VMS.TPS
       }
       // For each organ constraint, see if any plan structure names match
       // If so, compare constraint and add to list
-      List<PlanComparison> results = new List<PlanComparison>();
       for(int n = 0; n < Constraints.Count(); n++)
       {
         // Find matching plan structure name, if able
@@ -572,7 +642,7 @@ namespace VMS.TPS
             tempResult.ConstraintName = Constraints[n].ConstraintList[p];
             cValue = Constraints[n].ConstraintValues[p];
             tempResult.ConstraintValue = cValue.ToString()+" "+Constraints[n].ConstraintUnits[p];
-            tempResult.ConstraintComplication = Constraints[n].ConstraintComplications[p];
+            tempResult.ConstraintNote = Constraints[n].ConstraintNotes[p];
             // Load DVH for particular structure
             Structure oar = (from s in SelectedStructureSet.Structures where
               s.Id == tempResult.StructureName select s).FirstOrDefault();
@@ -630,10 +700,10 @@ namespace VMS.TPS
         }
       }
 
-      data.ItemsSource = results;
       if(any_missing) excludedList = excludedList.Remove(excludedList.Count()-2);
       else excludedList += ("None");
-      return excludedList;
+      notes = excludedList;
+      return results;
     }
   }
 
