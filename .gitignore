@@ -8,4 +8,4 @@ VMS.*.dll
 
 # Ignore all testing executables and report PDFs found locally
 *.exe
-*.exe
+*.pdf
