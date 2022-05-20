@@ -6,5 +6,6 @@ Build/
 # Ignore all proprietary Varian DLLs found locally
 VMS.*.dll
 
-# Ignore all testing executables found locally
+# Ignore all testing executables and report PDFs found locally
+*.exe
 *.exe
